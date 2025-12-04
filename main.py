@@ -7,38 +7,65 @@ import traceback
 
 app = FastAPI()
 
-# Path to font and PSD
-FONT_PATH = "./fonts/DejaVuSerif-Bold.ttf"
-TEMPLATE_PATH = "./oro dance certificate (1)[1].psd"  # make sure exact filename
+# Path to PSD template
+TEMPLATE_PATH = "oro dance certificate (1)[1].psd"
+
+# Font paths to try (Railway uses Linux, so we need fallbacks)
+FONT_PATHS = [
+    "fonts/GOUDYB.TTF",                    # Goudy Old Style Bold (local)
+    "fonts/DejaVuSerif-Bold.ttf",          # Fallback serif font
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Railway/Linux path
+]
 
 def generate_certificate(name: str):
     try:
         if not os.path.exists(TEMPLATE_PATH):
-            raise FileNotFoundError(f"PSD template not found at {TEMPLATE_PATH}")
-        if not os.path.exists(FONT_PATH):
-            raise FileNotFoundError(f"Font file not found at {FONT_PATH}")
+            raise FileNotFoundError(f"Template not found at {TEMPLATE_PATH}")
 
-        # Open PSD template
+        # Load and convert PSD to image
         psd = PSDImage.open(TEMPLATE_PATH)
-        img = psd.composite().convert("RGB")
-
-        draw = ImageDraw.Draw(img)
+        img = psd.composite().convert('RGB')
+        
         W, H = img.size
-
-        font_size = int(49.4 * 1.333)
-        font = ImageFont.truetype(FONT_PATH, font_size)
-
-        # Calculate centered text
+        draw = ImageDraw.Draw(img)
+        
+        # Font configuration - 160 px
+        font_size = 160
+        
+        # Try to load font
+        font = None
+        last_error = None
+        for font_path in FONT_PATHS:
+            if os.path.exists(font_path):
+                try:
+                    font = ImageFont.truetype(font_path, font_size)
+                    print(f"✓ Using font: {font_path}")
+                    break
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+        
+        if font is None:
+            error_msg = f"No suitable font found. Last error: {last_error}" if last_error else "No suitable font found. Please add font to ./fonts/ directory"
+            raise FileNotFoundError(error_msg)
+        
+        # Calculate text position (centered horizontally)
         bbox = draw.textbbox((0, 0), name, font=font)
         text_width = bbox[2] - bbox[0]
-        x = (W - text_width) // 2
-        y = int(H * 0.375)
-
-        color = (182, 152, 105)
+        
+        # Position: Centered horizontally, at 37% from top
+        x = int((W - text_width) / 2)
+        y = int(H * 0.37)
+        
+        # Color: #b69869 (golden/tan color)
+        color = (0xb6, 0x98, 0x69)
+        
+        # Draw the name
         draw.text((x, y), name, fill=color, font=font)
-
+        
+        # Save as PDF
         buffer = io.BytesIO()
-        img.save(buffer, "PDF", resolution=100.0)
+        img.save(buffer, 'PDF', resolution=100.0)
         pdf_bytes = buffer.getvalue()
         buffer.close()
 
