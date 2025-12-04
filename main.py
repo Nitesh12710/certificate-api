@@ -10,7 +10,7 @@ app = FastAPI()
 FONT_PATH = "./fonts/DejaVuSerif-Bold.ttf"  # replace with actual filename
 
 # Path to PSD template
-TEMPLATE_PATH = "./oro_template.psd"
+TEMPLATE_PATH = "oro dance certificate (1)[1].psd"
 
 def generate_certificate(name: str):
     # Open PSD template and convert to RGB
