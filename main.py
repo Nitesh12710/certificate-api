@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, Response
 from psd_tools import PSDImage
 from PIL import Image, ImageDraw, ImageFont
@@ -7,43 +6,48 @@ import os
 
 app = FastAPI()
 
-FONT_PATHS = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-]
+# Path to local font (your .ttf file in fonts/)
+FONT_PATH = "./fonts/YourFontFile.ttf"  # replace with actual filename
 
-TEMPLATE_PATH = "oro dance certificate (1)[1].psd"
+# Path to PSD template
+TEMPLATE_PATH = "./oro_template.psd"
 
 def generate_certificate(name: str):
+    # Open PSD template and convert to RGB
     psd = PSDImage.open(TEMPLATE_PATH)
     img = psd.composite().convert("RGB")
 
     draw = ImageDraw.Draw(img)
     W, H = img.size
+
+    # Font size
     font_size = int(49.4 * 1.333)
 
-    font = None
-    for f in FONT_PATHS:
-        if os.path.exists(f):
-            try:
-                font = ImageFont.truetype(f, font_size)
-                break
-            except:
-                pass
-
-    if font is None:
+    # Load font
+    if os.path.exists(FONT_PATH):
+        font = ImageFont.truetype(FONT_PATH, font_size)
+    else:
         font = ImageFont.load_default()
 
-    bbox = draw.textbbox((0,0), name, font=font)
+    # Calculate centered position
+    bbox = draw.textbbox((0, 0), name, font=font)
     text_width = bbox[2] - bbox[0]
     x = (W - text_width) // 2
     y = int(H * 0.375)
-    color = (182,152,105)
+
+    # Text color #b69869
+    color = (182, 152, 105)
+
+    # Draw name on image
     draw.text((x, y), name, fill=color, font=font)
 
+    # Save image to PDF in memory
     buffer = io.BytesIO()
     img.save(buffer, "PDF", resolution=100.0)
-    return buffer.getvalue()
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    return pdf_bytes
 
 @app.get("/certificate")
 def certificate(name: str):
@@ -53,3 +57,8 @@ def certificate(name: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=\"{name}.pdf\""}
     )
+
+# Optional root to avoid 404
+@app.get("/")
+def root():
+    return {"message": "Certificate API is running. Use /certificate?name=NAME to generate PDF."}
