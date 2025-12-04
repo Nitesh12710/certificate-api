@@ -7,7 +7,7 @@ import os
 app = FastAPI()
 
 # Path to local font (your .ttf file in fonts/)
-FONT_PATH = "./fonts/YourFontFile.ttf"  # replace with actual filename
+FONT_PATH = "./fonts/DejaVuSerif-Bold.ttf"  # replace with actual filename
 
 # Path to PSD template
 TEMPLATE_PATH = "./oro_template.psd"
